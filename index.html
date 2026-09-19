@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mi Nutrición</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f5f7fb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Mi Nutrición">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;color:#1f2937;background:#f5f7fb}
+body{margin:0}.wrap{max-width:980px;margin:auto;padding:24px}
+nav{display:flex;gap:8px;margin-bottom:20px}button,.btn{border:0;border-radius:10px;padding:10px 14px;cursor:pointer;background:#e5e7eb;color:#111827;font-weight:600}nav button.active{background:#111827;color:white}
+.card{background:white;border-radius:16px;padding:20px;margin:14px 0;box-shadow:0 2px 12px #0000000d}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.metric{font-size:26px;font-weight:750}.muted{color:#6b7280;font-size:14px}
+input,select{width:100%;box-sizing:border-box;padding:10px;border:1px solid #d1d5db;border-radius:9px;background:white}
+label{display:block;font-size:14px;font-weight:650;margin-bottom:5px}
+.row{display:flex;gap:10px;align-items:center}.row>*{flex:1}
+.foodrow{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #eee}
+.smallbtn{padding:5px 8px;font-size:12px}.progress{height:9px;background:#e5e7eb;border-radius:99px;overflow:hidden}.bar{height:100%;background:#111827}
+table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:8px;border-bottom:1px solid #eee}
+svg{width:100%;height:260px;background:#fff;border-radius:12px}
+.hidden{display:none}.warning{color:#b45309}.good{color:#047857}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Mi Nutrición</h1>
+<nav>
+<button data-tab="today" class="active">Hoy</button>
+<button data-tab="weight">Peso</button>
+<button data-tab="settings">Configuración</button>
+</nav>
+
+<section id="today">
+<div class="card">
+<h2>Hoy</h2>
+<div class="grid">
+<div><div class="muted">Pasos</div><div class="metric" id="stepsView">0 / 10.000</div><div class="muted" id="stepsRemaining">10.000 pasos restantes</div></div>
+<div><div class="muted">Objetivo de ingesta</div><div class="metric" id="calTarget">0 kcal</div></div>
+<div><div class="muted">Consumidas</div><div class="metric" id="calEaten">0 kcal</div></div>
+<div><div class="muted">Te quedan</div><div class="metric" id="calLeft">0 kcal</div></div>
+</div>
+<div style="margin-top:16px">
+<label>Añadir pasos</label><div class="row"><input id="stepsInput" type="number" min="0" step="1" placeholder="1000"><button id="saveSteps" type="button">Registrar pasos</button></div>
+<div id="stepsHistory" style="margin-top:12px"></div>
+</div>
+</div>
+
+<div class="card">
+<h2>Macros</h2>
+<div id="macros"></div>
+</div>
+
+<div class="card">
+<h2>Añadir alimento</h2>
+<div class="grid">
+<div><label>Alimento</label><select id="foodSelect"><option value="" selected disabled>Selecciona un alimento...</option></select></div>
+<div><label>Comida</label><select id="mealSelect"><option>Desayuno</option><option>Comida</option><option>Cena</option><option>Snack</option></select></div>
+<div><label>Cantidad (g)</label><input id="gramsInput" type="number" min="0" step="1" placeholder="150"></div>
+</div>
+<div id="foodInfo" class="muted" style="margin:10px 0"></div>
+<button id="addFood">+ Añadir</button>
+</div>
+
+<div class="card">
+<h2>Historial de hoy</h2><div id="meals"></div>
+</div>
+</section>
+
+<section id="weight" class="hidden">
+<div class="card"><h2>Peso</h2><div class="grid">
+<div><div class="muted">Peso actual</div><div class="metric" id="currentWeight">—</div></div>
+<div><div class="muted">IMC</div><div class="metric" id="bmiValue">—</div></div>
+<div><div class="muted">Grasa corporal</div><div class="metric" id="bodyFatValue">—</div></div>
+</div></div>
+
+<div class="card"><h2>Registrar peso</h2>
+<div class="grid">
+<div><label>Peso (kg)</label><input id="weightInput" type="number" step="0.01" min="0"></div>
+<div><label>Grasa corporal (%)</label><input id="fatInput" type="number" step="0.1" min="0" max="100"></div>
+</div>
+<p class="muted">Fecha: <span id="dateLabel"></span></p>
+<button id="saveWeight">Guardar</button>
+</div>
+
+<div class="card"><h2>Registros</h2><div id="weightHistory"></div></div>
+<div class="card"><h2>Evolución del peso</h2><div id="weightChart"></div></div>
+
+<div class="card"><h2>Objetivo</h2>
+<div class="grid">
+<div><div class="muted">Objetivo</div><div class="metric">75,00 kg</div></div>
+<div><div class="muted">Te quedan</div><div class="metric" id="kgLeft">—</div></div>
+<div><div class="muted">Fecha estimada</div><div class="metric" id="goalDate">—</div></div>
+<div><div class="muted">Días restantes</div><div class="metric" id="daysLeft">—</div></div>
+</div></div>
+</section>
+
+<section id="settings" class="hidden">
+<div class="card"><h2>Configuración</h2>
+<div class="grid">
+<div><label>Altura (cm)</label><input id="height" type="number" value="174"></div>
+<div><label>Edad (años)</label><input id="age" type="number" value="33"></div>
+<div><label>Déficit (kcal/día)</label><input id="deficit" type="number" value="500"></div>
+<div><label>Objetivo proteína (g)</label><input id="proteinTarget" type="number" value="145"></div>
+<div><label>Objetivo grasa (g)</label><input id="fatTarget" type="number" value="55"></div>
+<div><label>Objetivo hidratos (g)</label><input id="carbTarget" type="number" value="145"></div>
+<div><label>Objetivo fibra (g)</label><input id="fiberTarget" type="number" value="30"></div>
+<div><label>Objetivo peso (kg)</label><input id="goalWeight" type="number" step="0.01" value="75"></div>
+<div><label>Objetivo pasos</label><input id="stepTarget" type="number" value="10000"></div>
+</div><br><button id="saveSettings">Guardar configuración</button>
+<p class="muted">El gasto por pasos se estima a 35 kcal por cada 1.000 pasos.</p>
+</div></section>
+</div>
+
+<script>
+const FOODS = [{"name": "Aceite de oliva", "kcal": 900.0, "fat": 100.0, "satFat": 13.8, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 0.0}, {"name": "Ajo", "kcal": 116.0, "fat": 0.2, "satFat": 0.0, "carbs": 24.3, "sugar": 2.2, "fiber": 1.2, "protein": 4.3}, {"name": "Almendras", "kcal": 618.0, "fat": 54.8, "satFat": 4.2, "carbs": 5.9, "sugar": 5.9, "fiber": 12.5, "protein": 25.2}, {"name": "Almidón de maiz", "kcal": 366.0, "fat": 0.5, "satFat": 0.1, "carbs": 90.0, "sugar": 0.5, "fiber": 0.6, "protein": 0.3}, {"name": "Alubias cocidas", "kcal": 70.0, "fat": 0.4, "satFat": 0.1, "carbs": 10.7, "sugar": 0.8, "fiber": 6.4, "protein": 5.8}, {"name": "Arándanos", "kcal": 47.0, "fat": 0.0, "satFat": 0.0, "carbs": 11.0, "sugar": 10.0, "fiber": 2.4, "protein": 0.7}, {"name": "Arroz", "kcal": 342.0, "fat": 1.0, "satFat": 0.2, "carbs": 75.0, "sugar": 0.5, "fiber": 0.4, "protein": 8.2}, {"name": "Arroz frito con pollo y espinaca", "kcal": 498.0, "fat": 19.9, "satFat": 5.2, "carbs": 37.6, "sugar": 5.1, "fiber": 3.6, "protein": 42.0}, {"name": "Arroz frito con puré de legumbres, espinaca y huevo (receta)", "kcal": 501.0, "fat": 13.4, "satFat": 2.8, "carbs": 66.8, "sugar": 6.2, "fiber": 10.0, "protein": 28.2}, {"name": "Arroz frito con soja texturizada (receta)", "kcal": 526.0, "fat": 20.5, "satFat": 3.8, "carbs": 55.7, "sugar": 6.9, "fiber": 7.8, "protein": 29.6}, {"name": "Arroz integral", "kcal": 344.0, "fat": 2.8, "satFat": 0.7, "carbs": 72.0, "sugar": 0.5, "fiber": 3.3, "protein": 7.6}, {"name": "Atún lata natural", "kcal": 98.0, "fat": 1.2, "satFat": 0.4, "carbs": 0.9, "sugar": 0.5, "fiber": 0.0, "protein": 21.0}, {"name": "Avena", "kcal": 355.0, "fat": 7.0, "satFat": 1.3, "carbs": 59.0, "sugar": 0.7, "fiber": 10.0, "protein": 14.0}, {"name": "Azúcar", "kcal": 400.0, "fat": 0.0, "satFat": 0.0, "carbs": 100.0, "sugar": 100.0, "fiber": 0.0, "protein": 0.0}, {"name": "Berberechos al natural", "kcal": 54.0, "fat": 0.1, "satFat": 0.1, "carbs": 4.8, "sugar": 0.1, "fiber": 0.0, "protein": 8.4}, {"name": "Bizcocho (healthy)", "kcal": 254.0, "fat": 3.4, "satFat": 0.9, "carbs": 46.6, "sugar": 26.3, "fiber": 6.4, "protein": 9.2}, {"name": "Bol yogur desayuno (receta)", "kcal": 256.0, "fat": 7.8, "satFat": 1.1, "carbs": 27.2, "sugar": 8.8, "fiber": 9.4, "protein": 19.4}, {"name": "Brócoli", "kcal": 23.0, "fat": 0.4, "satFat": 0.1, "carbs": 1.8, "sugar": 1.5, "fiber": 2.6, "protein": 3.0}, {"name": "Burger de pavo y espinacas", "kcal": 100.0, "fat": 2.8, "satFat": 1.0, "carbs": 3.6, "sugar": 0.7, "fiber": 0.0, "protein": 15.0}, {"name": "Burritos vegetales (receta)", "kcal": 512.0, "fat": 15.6, "satFat": 6.5, "carbs": 61.7, "sugar": 4.5, "fiber": 9.8, "protein": 31.1}, {"name": "Cacahuetes", "kcal": 572.0, "fat": 48.0, "satFat": 9.9, "carbs": 10.0, "sugar": 6.5, "fiber": 8.0, "protein": 24.9}, {"name": "Calabacín", "kcal": 20.0, "fat": 0.5, "satFat": 0.0, "carbs": 2.0, "sugar": 1.9, "fiber": 1.0, "protein": 1.9}, {"name": "Caldo de pollo", "kcal": 4.0, "fat": 0.2, "satFat": 0.1, "carbs": 0.4, "sugar": 0.0, "fiber": 0.0, "protein": 0.3}, {"name": "Carne picada ternera", "kcal": 204.0, "fat": 14.0, "satFat": 6.6, "carbs": 0.5, "sugar": 0.5, "fiber": 0.0, "protein": 19.0}, {"name": "Cebolla", "kcal": 29.0, "fat": 0.3, "satFat": 0.0, "carbs": 5.3, "sugar": 5.3, "fiber": 1.8, "protein": 1.2}, {"name": "Cereales 0%", "kcal": 356.0, "fat": 1.6, "satFat": 0.3, "carbs": 75.0, "sugar": 1.0, "fiber": 2.0, "protein": 10.3}, {"name": "Cerezas", "kcal": 65.0, "fat": 0.2, "satFat": 0.0, "carbs": 14.8, "sugar": 12.7, "fiber": 2.1, "protein": 1.0}, {"name": "Champiñones", "kcal": 30.0, "fat": 1.2, "satFat": 0.0, "carbs": 0.5, "sugar": 0.5, "fiber": 1.9, "protein": 4.3}, {"name": "Chia", "kcal": 404.0, "fat": 34.0, "satFat": 4.0, "carbs": 2.6, "sugar": 0.4, "fiber": 34.4, "protein": 22.0}, {"name": "Chocolate negro 99%", "kcal": 578.0, "fat": 54.0, "satFat": 34.0, "carbs": 8.0, "sugar": 2.0, "fiber": 16.0, "protein": 15.0}, {"name": "Chop Suey de pollo (receta)", "kcal": 298.0, "fat": 13.5, "satFat": 2.2, "carbs": 8.8, "sugar": 5.7, "fiber": 2.7, "protein": 35.4}, {"name": "Claras de huevo", "kcal": 51.0, "fat": 0.5, "satFat": 0.5, "carbs": 0.5, "sugar": 0.5, "fiber": 0.0, "protein": 11.0}, {"name": "Col", "kcal": 29.0, "fat": 0.1, "satFat": 0.0, "carbs": 5.6, "sugar": 3.6, "fiber": 2.3, "protein": 1.4}, {"name": "Coles de bruselas", "kcal": 34.0, "fat": 0.3, "satFat": 0.1, "carbs": 4.5, "sugar": 2.7, "fiber": 4.4, "protein": 3.2}, {"name": "Crema de cacahuete", "kcal": 591.0, "fat": 47.0, "satFat": 6.6, "carbs": 12.0, "sugar": 5.4, "fiber": 8.2, "protein": 30.0}, {"name": "Curry con patata, soja y huevo (receta)", "kcal": 529.0, "fat": 15.9, "satFat": 3.3, "carbs": 65.1, "sugar": 18.3, "fiber": 16.4, "protein": 31.3}, {"name": "Ensalada china (Hacendado)", "kcal": 33.0, "fat": 0.5, "satFat": 0.2, "carbs": 6.4, "sugar": 4.3, "fiber": 1.2, "protein": 0.6}, {"name": "Ensalada de pollo picante y lentejas (receta)", "kcal": 320.0, "fat": 7.1, "satFat": 1.3, "carbs": 19.4, "sugar": 5.0, "fiber": 4.9, "protein": 44.6}, {"name": "Espelta", "kcal": 347.0, "fat": 2.7, "satFat": 0.2, "carbs": 66.0, "sugar": 1.9, "fiber": 10.7, "protein": 14.6}, {"name": "Espinacas", "kcal": 26.0, "fat": 0.0, "satFat": 0.0, "carbs": 3.6, "sugar": 0.0, "fiber": 2.2, "protein": 2.9}, {"name": "Gambas", "kcal": 68.0, "fat": 1.0, "satFat": 0.2, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 14.7}, {"name": "Garbanzos cocidos", "kcal": 80.0, "fat": 2.2, "satFat": 0.5, "carbs": 9.5, "sugar": 0.7, "fiber": 4.0, "protein": 5.5}, {"name": "Guisantes", "kcal": 72.0, "fat": 0.4, "satFat": 0.2, "carbs": 11.0, "sugar": 2.8, "fiber": 5.0, "protein": 6.0}, {"name": "Gulas", "kcal": 134.0, "fat": 7.7, "satFat": 0.7, "carbs": 8.8, "sugar": 1.9, "fiber": 0.0, "protein": 7.4}, {"name": "Harina", "kcal": 344.0, "fat": 1.3, "satFat": 0.1, "carbs": 73.0, "sugar": 0.6, "fiber": 3.0, "protein": 10.0}, {"name": "Harina de avena", "kcal": 352.0, "fat": 7.1, "satFat": 1.3, "carbs": 59.9, "sugar": 1.0, "fiber": 10.0, "protein": 12.0}, {"name": "Harina de espelta", "kcal": 325.0, "fat": 1.9, "satFat": 0.3, "carbs": 63.0, "sugar": 0.7, "fiber": 8.3, "protein": 14.0}, {"name": "Huevo", "kcal": 152.0, "fat": 11.1, "satFat": 3.1, "carbs": 0.5, "sugar": 0.5, "fiber": 0.0, "protein": 12.5}, {"name": "Langostinos", "kcal": 99.0, "fat": 1.1, "satFat": 0.3, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 22.2}, {"name": "Leche desnatada", "kcal": 35.0, "fat": 0.3, "satFat": 0.2, "carbs": 4.9, "sugar": 4.9, "fiber": 0.0, "protein": 3.2}, {"name": "Leche desnatada +Proteinas", "kcal": 44.0, "fat": 0.2, "satFat": 0.1, "carbs": 4.6, "sugar": 4.6, "fiber": 0.0, "protein": 6.0}, {"name": "Lechuga", "kcal": 13.0, "fat": 0.2, "satFat": 0.0, "carbs": 1.4, "sugar": 1.4, "fiber": 1.5, "protein": 1.4}, {"name": "Lentejas cocidas", "kcal": 79.0, "fat": 0.4, "satFat": 0.1, "carbs": 10.7, "sugar": 0.5, "fiber": 7.8, "protein": 8.2}, {"name": "Lentejas secas", "kcal": 301.0, "fat": 1.2, "satFat": 0.2, "carbs": 48.1, "sugar": 1.3, "fiber": 10.7, "protein": 24.5}, {"name": "Lomo cerdo", "kcal": 152.0, "fat": 8.9, "satFat": 3.3, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 18.0}, {"name": "Lonchas pavo", "kcal": 76.0, "fat": 0.5, "satFat": 0.3, "carbs": 1.3, "sugar": 1.3, "fiber": 0.0, "protein": 16.5}, {"name": "Manzana", "kcal": 57.0, "fat": 0.0, "satFat": 0.0, "carbs": 14.0, "sugar": 10.0, "fiber": 2.4, "protein": 0.3}, {"name": "Mayonesa Ligeresa", "kcal": 176.0, "fat": 16.0, "satFat": 2.0, "carbs": 7.4, "sugar": 3.0, "fiber": 0.0, "protein": 0.5}, {"name": "Medallones merluza", "kcal": 83.0, "fat": 1.2, "satFat": 0.3, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 18.0}, {"name": "Melocotón", "kcal": 41.0, "fat": 0.1, "satFat": 0.0, "carbs": 9.5, "sugar": 8.4, "fiber": 1.5, "protein": 0.5}, {"name": "Mostaza clásica", "kcal": 72.0, "fat": 5.3, "satFat": 0.3, "carbs": 2.3, "sugar": 1.0, "fiber": 0.0, "protein": 3.8}, {"name": "Muffins (healthy)", "kcal": 128.0, "fat": 5.7, "satFat": 0.9, "carbs": 12.6, "sugar": 5.7, "fiber": 3.6, "protein": 6.7}, {"name": "Mugcake (healthy)", "kcal": 238.0, "fat": 1.5, "satFat": 0.8, "carbs": 26.6, "sugar": 4.4, "fiber": 0.9, "protein": 29.7}, {"name": "Muslos de pollo", "kcal": 134.0, "fat": 6.9, "satFat": 2.2, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 18.0}, {"name": "Nueces", "kcal": 703.0, "fat": 69.6, "satFat": 6.0, "carbs": 2.2, "sugar": 1.7, "fiber": 6.7, "protein": 17.0}, {"name": "Palitos cangrejo", "kcal": 88.0, "fat": 0.8, "satFat": 0.2, "carbs": 12.4, "sugar": 3.5, "fiber": 0.0, "protein": 7.9}, {"name": "Pan blanco", "kcal": 255.0, "fat": 1.1, "satFat": 0.2, "carbs": 53.0, "sugar": 3.2, "fiber": 2.1, "protein": 8.2}, {"name": "Pan de Pita (receta)", "kcal": 274.0, "fat": 5.9, "satFat": 0.8, "carbs": 48.7, "sugar": 1.6, "fiber": 2.0, "protein": 6.5}, {"name": "Pancakes proteicos (receta)", "kcal": 184.0, "fat": 5.8, "satFat": 1.4, "carbs": 13.6, "sugar": 4.2, "fiber": 4.4, "protein": 19.2}, {"name": "Pasta", "kcal": 338.0, "fat": 1.5, "satFat": 0.3, "carbs": 68.0, "sugar": 3.1, "fiber": 1.8, "protein": 13.0}, {"name": "Pasta lentejas", "kcal": 319.0, "fat": 1.7, "satFat": 0.4, "carbs": 50.0, "sugar": 1.2, "fiber": 0.0, "protein": 26.0}, {"name": "Patata", "kcal": 71.0, "fat": 0.1, "satFat": 0.1, "carbs": 15.7, "sugar": 1.7, "fiber": 1.8, "protein": 1.7}, {"name": "Pechuga pavo", "kcal": 104.0, "fat": 0.9, "satFat": 0.3, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 24.0}, {"name": "Pechuga pollo", "kcal": 104.0, "fat": 1.8, "satFat": 0.5, "carbs": 0.0, "sugar": 0.0, "fiber": 0.0, "protein": 22.0}, {"name": "Pimiento", "kcal": 16.0, "fat": 0.8, "satFat": 0.0, "carbs": 1.6, "sugar": 1.5, "fiber": 1.8, "protein": 0.6}, {"name": "Pita con hamburguesa de lentejas y huevo (receta)", "kcal": 544.0, "fat": 21.6, "satFat": 4.8, "carbs": 56.9, "sugar": 3.2, "fiber": 6.2, "protein": 30.4}, {"name": "Plátano", "kcal": 92.0, "fat": 0.3, "satFat": 0.1, "carbs": 21.1, "sugar": 17.3, "fiber": 2.6, "protein": 1.1}, {"name": "Pollo con salsa de tomate (receta)", "kcal": 222.0, "fat": 5.5, "satFat": 1.0, "carbs": 11.7, "sugar": 8.3, "fiber": 3.9, "protein": 31.3}, {"name": "Proteina en polvo Hacendado", "kcal": 390.0, "fat": 13.2, "satFat": 1.7, "carbs": 21.0, "sugar": 10.0, "fiber": 0.0, "protein": 46.7}, {"name": "Proteina en polvo HSN", "kcal": 363.0, "fat": 3.2, "satFat": 2.4, "carbs": 6.5, "sugar": 5.0, "fiber": 0.0, "protein": 77.0}, {"name": "Queso azul", "kcal": 343.0, "fat": 29.0, "satFat": 19.0, "carbs": 0.5, "sugar": 0.5, "fiber": 0.0, "protein": 20.0}, {"name": "Queso batido 0%", "kcal": 51.0, "fat": 0.5, "satFat": 0.1, "carbs": 3.5, "sugar": 3.5, "fiber": 0.0, "protein": 8.0}, {"name": "Queso blanco", "kcal": 267.0, "fat": 17.0, "satFat": 12.0, "carbs": 1.6, "sugar": 0.5, "fiber": 0.0, "protein": 27.0}, {"name": "Queso burgos 0%", "kcal": 67.0, "fat": 0.4, "satFat": 0.1, "carbs": 3.9, "sugar": 3.9, "fiber": 0.0, "protein": 12.0}, {"name": "Queso feta", "kcal": 277.0, "fat": 23.2, "satFat": 16.4, "carbs": 1.0, "sugar": 0.0, "fiber": 0.0, "protein": 16.0}, {"name": "Quinoa", "kcal": 375.0, "fat": 6.1, "satFat": 0.8, "carbs": 66.0, "sugar": 6.3, "fiber": 7.0, "protein": 14.0}, {"name": "Salmón ahumado", "kcal": 180.0, "fat": 10.0, "satFat": 1.5, "carbs": 0.5, "sugar": 0.5, "fiber": 0.0, "protein": 22.0}, {"name": "Salsa de Soja", "kcal": 59.0, "fat": 0.5, "satFat": 0.1, "carbs": 6.3, "sugar": 4.3, "fiber": 0.0, "protein": 7.3}, {"name": "Seitán", "kcal": 147.0, "fat": 1.2, "satFat": 0.2, "carbs": 14.0, "sugar": 0.8, "fiber": 2.7, "protein": 20.0}, {"name": "Soja texturizada", "kcal": 331.0, "fat": 8.8, "satFat": 1.5, "carbs": 13.0, "sugar": 6.3, "fiber": 17.5, "protein": 50.0}, {"name": "Sopa de verduras y pollo (receta)", "kcal": 376.0, "fat": 16.7, "satFat": 4.8, "carbs": 16.5, "sugar": 9.0, "fiber": 5.8, "protein": 39.9}, {"name": "Tofu", "kcal": 110.0, "fat": 6.9, "satFat": 1.2, "carbs": 0.9, "sugar": 0.5, "fiber": 0.3, "protein": 11.1}, {"name": "Tomate", "kcal": 19.0, "fat": 0.1, "satFat": 0.0, "carbs": 3.5, "sugar": 3.5, "fiber": 1.4, "protein": 1.0}, {"name": "Tortillas de trigo", "kcal": 286.0, "fat": 5.8, "satFat": 2.0, "carbs": 50.0, "sugar": 1.7, "fiber": 4.2, "protein": 8.4}, {"name": "Wok de pollo (receta)", "kcal": 255.0, "fat": 8.8, "satFat": 1.9, "carbs": 9.2, "sugar": 6.4, "fiber": 2.8, "protein": 34.8}, {"name": "Wok de ternera (receta)", "kcal": 327.0, "fat": 19.7, "satFat": 8.4, "carbs": 9.8, "sugar": 4.4, "fiber": 2.0, "protein": 27.7}, {"name": "Yogur proteinas", "kcal": 57.0, "fat": 0.5, "satFat": 0.1, "carbs": 3.1, "sugar": 3.1, "fiber": 0.0, "protein": 10.0}, {"name": "Zanahoria", "kcal": 44.0, "fat": 0.2, "satFat": 0.0, "carbs": 9.6, "sugar": 4.7, "fiber": 2.8, "protein": 0.9}];
+const DEFAULTS={height:174,age:33,deficit:500,proteinTarget:145,fatTarget:55,carbTarget:145,fiberTarget:30,goalWeight:75,stepTarget:10000};
+let settings=JSON.parse(localStorage.getItem("nutri_settings")||"null")||DEFAULTS;
+let state=JSON.parse(localStorage.getItem("nutri_state")||'{"foodLog":{},"weightLog":{}}');
+
+function today(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function save(){localStorage.setItem("nutri_settings",JSON.stringify(settings));localStorage.setItem("nutri_state",JSON.stringify(state))}
+function n(x,d=1){return Number(x).toLocaleString("es-ES",{minimumFractionDigits:d,maximumFractionDigits:d})}
+function fmtDate(s){return new Date(s+"T12:00:00").toLocaleDateString("es-ES",{day:"2-digit",month:"short",year:"numeric"})}
+function currentWeight(){let entries=Object.entries(state.weightLog).sort();return entries.length?entries.at(-1)[1].weight:null}
+function bmr(w){return 11.6*w+7.27*settings.height-5.8*settings.age-369}
+function dailyLog(){return state.foodLog[today()]||[]}
+function nutrients(log){
+ return log.reduce((a,x)=>{let f=x.grams/100;a.kcal+=x.kcal*f;a.fat+=x.fat*f;a.carbs+=x.carbs*f;a.sugar+=x.sugar*f;a.fiber+=x.fiber*f;a.protein+=x.protein*f;return a},{kcal:0,fat:0,carbs:0,sugar:0,fiber:0,protein:0})
+}
+function init(){
+ document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>{document.querySelectorAll("nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll("section").forEach(s=>s.classList.add("hidden"));document.getElementById(b.dataset.tab).classList.remove("hidden");if(b.dataset.tab==="weight")renderWeight()});
+ const sel=document.getElementById("foodSelect");FOODS.forEach((f,i)=>{let o=document.createElement("option");o.value=i;o.textContent=f.name;sel.appendChild(o)});sel.onchange=renderFoodInfo;
+ document.getElementById("saveSteps").onclick=()=>{
+   let value=+document.getElementById("stepsInput").value||0;
+   if(value<=0){alert("Introduce una cantidad de pasos válida.");return}
+   state.steps=state.steps||{};
+   if(!Array.isArray(state.steps[today()])) state.steps[today()]=state.steps[today()] ? [Number(state.steps[today()])] : [];
+   state.steps[today()].push(value);
+   document.getElementById("stepsInput").value="";
+   save();
+   renderToday();
+ };
+ document.getElementById("addFood").onclick=addFood;document.getElementById("saveWeight").onclick=saveWeight;document.getElementById("saveSettings").onclick=saveSettings;
+ Object.keys(DEFAULTS).forEach(k=>{let el=document.getElementById(k);if(el)el.value=settings[k]});
+ document.getElementById("dateLabel").textContent=fmtDate(today());renderFoodInfo();renderToday();renderWeight()
+}
+function renderFoodInfo(){
+ let f=FOODS[+document.getElementById("foodSelect").value];
+ if(!f){document.getElementById("foodInfo").textContent="Selecciona un alimento.";return}
+ document.getElementById("foodInfo").textContent=`Por 100 g: ${n(f.kcal,0)} kcal · ${n(f.fat)} g grasa · ${n(f.carbs)} g hidratos · ${n(f.protein)} g proteína · ${n(f.fiber)} g fibra · ${n(f.sugar)} g azúcares`;
+}
+function addFood(){
+ let foodEl=document.getElementById("foodSelect"), mealEl=document.getElementById("mealSelect"), gramsEl=document.getElementById("gramsInput");
+ let f=FOODS[+foodEl.value],g=+gramsEl.value;
+ if(!f || !g || g<=0){alert("Selecciona un alimento e introduce una cantidad válida.");return}
+ state.foodLog[today()]=state.foodLog[today()]||[];
+ state.foodLog[today()].push({...f,grams:g,meal:mealEl.value});
+ gramsEl.value="";
+ foodEl.selectedIndex=0;
+ document.getElementById("foodInfo").textContent="Selecciona un alimento.";
+ save();
+ renderToday();
+}
+function removeFood(i){state.foodLog[today()].splice(i,1);save();renderToday()}
+function stepEntriesForDay(day){
+ let v=state.steps?.[day];
+ if(Array.isArray(v)) return v;
+ return v ? [Number(v)] : [];
+}
+function removeStep(i){
+ let entries=stepEntriesForDay(today());
+ entries.splice(i,1);
+ state.steps=state.steps||{};
+ state.steps[today()]=entries;
+ save();
+ renderToday();
+}
+function renderToday(){
+ let w=currentWeight()||82.15,steps=stepEntriesForDay(today()).reduce((a,v)=>a+Number(v),0), log=dailyLog(),tot=nutrients(log), target=bmr(w)+steps*.035-settings.deficit;
+ document.getElementById("stepsView").textContent=`${steps.toLocaleString("es-ES")} / ${settings.stepTarget.toLocaleString("es-ES")} pasos`;
+ let rem=settings.stepTarget-steps;document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes`:`+${(-rem).toLocaleString("es-ES")} pasos`;
+ let stepEntries=stepEntriesForDay(today());
+ document.getElementById("stepsHistory").innerHTML=stepEntries.length
+   ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos</span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
+   : "<p class='muted'>Todavía no has añadido pasos.</p>";
+ document.getElementById("calTarget").textContent=`${n(target,0)} kcal`;document.getElementById("calEaten").textContent=`${n(tot.kcal,0)} kcal`;document.getElementById("calLeft").textContent=`${n(target-tot.kcal,0)} kcal`;
+ const rows=[["Proteína",tot.protein,settings.proteinTarget],["Grasa",tot.fat,settings.fatTarget],["Hidratos",tot.carbs,settings.carbTarget],["Fibra",tot.fiber,settings.fiberTarget],["Azúcares",tot.sugar,null]];
+ document.getElementById("macros").innerHTML=rows.map(r=>`<div style="margin:10px 0"><div class="row"><b>${r[0]}</b><span>${n(r[1])} g${r[2]?` / ${n(r[2])} g`:""}</span></div>${r[2]?`<div class="progress"><div class="bar" style="width:${Math.min(100,r[1]/r[2]*100)}%"></div></div>`:""}</div>`).join("");
+ const meals=["Desayuno","Comida","Cena","Snack"];document.getElementById("meals").innerHTML=meals.map(m=>{let items=log.map((x,i)=>({...x,i})).filter(x=>x.meal===m);if(!items.length)return "";let t=nutrients(items);return `<h3>${m} (${n(t.kcal,0)} kcal / ${n(t.fat)} g grasa / ${n(t.carbs)} g hidratos / ${n(t.protein)} g proteína)</h3>`+items.map(x=>`<div class="foodrow"><span>${x.name} — ${n(x.grams,0)} g</span><button class="smallbtn" onclick="removeFood(${x.i})">Eliminar</button></div>`).join("")}).join("")||"<p class='muted'>Todavía no has añadido alimentos.</p>";
+}
+function saveWeight(){
+ let w=+document.getElementById("weightInput").value,f=+document.getElementById("fatInput").value;
+ if(!w || !f){alert("Introduce peso y porcentaje de grasa válidos.");return}
+ state.weightLog=state.weightLog||{};
+ state.weightLog[today()]={weight:w,fat:f};
+ save();renderWeight();renderToday();
+}
+function removeWeight(day){
+ delete state.weightLog[day];
+ save();renderWeight();renderToday();
+}
+function saveSettings(){Object.keys(DEFAULTS).forEach(k=>{let el=document.getElementById(k);if(el)settings[k]=+el.value});save();renderToday();renderWeight()}
+function renderWeight(){
+ let entries=Object.entries(state.weightLog).sort(),last=entries.at(-1)?.[1],w=last?.weight||currentWeight()||82.15;
+ document.getElementById("weightHistory").innerHTML=entries.length
+   ? entries.slice().reverse().map(([day,v])=>`<div class="foodrow"><span>${fmtDate(day)} — ${n(v.weight,2)} kg · ${n(v.fat,1)} % grasa</span><button class="smallbtn" onclick="removeWeight('${day}')">Eliminar</button></div>`).join("")
+   : "<p class='muted'>Todavía no has añadido registros de peso.</p>";
+ currentWeightEl=document.getElementById("currentWeight");currentWeightEl.textContent=`${n(w,2)} kg`;
+ document.getElementById("bmiValue").textContent=n(w/(settings.height/100)**2,1);
+ document.getElementById("bodyFatValue").textContent=last?`${n(last.fat,1)} %`:"—";
+ let kg=Math.max(0,w-settings.goalWeight);
+ let monthlyLoss=(settings.deficit*30)/9000;
+ let days=monthlyLoss>0 ? Math.max(0,Math.ceil(kg/monthlyLoss*30)) : 0;
+ document.getElementById("kgLeft").textContent=`${n(kg,2)} kg`;document.getElementById("daysLeft").textContent=days;
+ let d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+days);document.getElementById("goalDate").textContent=days?d.toLocaleDateString("es-ES",{day:"2-digit",month:"long",year:"numeric"}):"Objetivo alcanzado";
+ document.getElementById("weightInput").value=last?.weight??"";document.getElementById("fatInput").value=last?.fat??"";drawChart(entries)
+}
+function drawChart(entries){
+ let el=document.getElementById("weightChart");if(!entries.length){el.innerHTML="<p class='muted'>Añade tu primer registro para ver la evolución.</p>";return}
+ let vals=entries.map(e=>e[1].weight),min=Math.min(...vals,settings.goalWeight)-1,max=Math.max(...vals)+1,W=900,H=260,p=45;
+ let pts=vals.map((v,i)=>[p+i*(W-2*p)/Math.max(1,vals.length-1),H-p-(v-min)/(max-min)*(H-2*p)]);
+ let path=pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" ");
+ el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="${p}" y1="${H-p}" x2="${W-p}" y2="${H-p}" stroke="#ddd"/><line x1="${p}" y1="${p}" x2="${p}" y2="${H-p}" stroke="#ddd"/><path d="${path}" fill="none" stroke="#111827" stroke-width="3"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="4" fill="#111827"><title>${entries[i][0]}: ${n(vals[i],2)} kg</title></circle>`).join("")}</svg>`;
+}
+init();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js'));
+}
+</script>
+</body>
+</html>
