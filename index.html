@@ -236,14 +236,14 @@ function renderToday(){
  let rem=settings.stepTarget-steps,remaining=Math.max(0,rem),minutes=Math.round(remaining/7000*60);document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes · ${minutes} min aprox.`:`+${(-rem).toLocaleString("es-ES")} pasos`;
  let stepEntries=stepEntriesForDay(today());
  document.getElementById("stepsHistory").innerHTML=stepEntries.length
-   ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos</span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
+   ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos · ${n(Number(v)*.035,0)} kcal</span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
    : "<p class='muted'>Todavía no has añadido pasos.</p>";
  document.getElementById("sportHistory").innerHTML=sports.length
    ? sports.map((v,i)=>`<div class="foodrow"><span>${v.sport} — ${n(v.kcal,0)} kcal</span><button class="smallbtn" onclick="removeSport(${i})">Eliminar</button></div>`).join("")
    : "<p class='muted'>Todavía no has añadido deporte.</p>";
  document.getElementById("calTarget").textContent=`${n(target,0)} kcal`;document.getElementById("calEaten").textContent=`${n(tot.kcal,0)} kcal`;document.getElementById("calLeft").textContent=`${n(target-tot.kcal,0)} kcal`;
- const rows=[["Proteína",tot.protein,settings.proteinTarget],["Grasa",tot.fat,settings.fatTarget],["Hidratos",tot.carbs,settings.carbTarget],["Fibra",tot.fiber,settings.fiberTarget],["Azúcares",tot.sugar,null]];
- document.getElementById("macros").innerHTML=rows.map(r=>`<div style="margin:10px 0"><div class="row"><b>${r[0]}</b><span>${n(r[1])} g${r[2]?` / ${n(r[2])} g`:""}</span></div>${r[2]?`<div class="progress"><div class="bar" style="width:${Math.min(100,r[1]/r[2]*100)}%"></div></div>`:""}</div>`).join("");
+ const rows=[["Kcal consumidas",tot.kcal,null,"kcal"],["Proteína",tot.protein,settings.proteinTarget,"g"],["Grasa",tot.fat,settings.fatTarget,"g"],["Hidratos",tot.carbs,settings.carbTarget,"g"],["Fibra",tot.fiber,settings.fiberTarget,"g"],["Azúcares",tot.sugar,null,"g"]];
+ document.getElementById("macros").innerHTML=rows.map(r=>`<div style="margin:10px 0"><div class="row"><b>${r[0]}</b><span>${n(r[1],r[3]==="kcal"?0:1)} ${r[3]}${r[2]?` / ${n(r[2])} ${r[3]}`:""}</span></div>${r[2]?`<div class="progress"><div class="bar" style="width:${Math.min(100,r[1]/r[2]*100)}%"></div></div>`:""}</div>`).join("");
  const meals=["Desayuno","Comida","Cena","Snack"];document.getElementById("meals").innerHTML=meals.map(m=>{let items=log.map((x,i)=>({...x,i})).filter(x=>x.meal===m);if(!items.length)return "";let t=nutrients(items);return `<h3>${m} (${n(t.kcal,0)} kcal / ${n(t.fat)} g grasa / ${n(t.carbs)} g hidratos / ${n(t.protein)} g proteína)</h3>`+items.map(x=>`<div class="foodrow"><span>${x.name} — ${n(x.grams,0)} g</span><button class="smallbtn" onclick="removeFood(${x.i})">Eliminar</button></div>`).join("")}).join("")||"<p class='muted'>Todavía no has añadido alimentos.</p>";
 }
 function addNewFood(){
@@ -260,7 +260,21 @@ function addNewFood(){
 }
 function renderCustomFoods(){
  let el=document.getElementById("customFoodsHistory");
- el.innerHTML=customFoods.length?customFoods.map(f=>`<div class="foodrow"><span>${f.name}</span><span class="muted">${n(f.kcal,0)} kcal / 100 g</span></div>`).join(""):"<p class='muted'>Todavía no has añadido alimentos propios.</p>";
+ el.innerHTML=customFoods.length?customFoods.map((f,i)=>`<div class="foodrow"><span>${f.name}</span><span class="muted">${n(f.kcal,0)} kcal / 100 g</span><button class="smallbtn" onclick="removeCustomFood(${i})">Eliminar</button></div>`).join(""):"<p class='muted'>Todavía no has añadido alimentos propios.</p>";
+}
+function removeCustomFood(i){
+ if(!customFoods[i]) return;
+ if(!confirm(`¿Eliminar ${customFoods[i].name}?`)) return;
+ customFoods.splice(i,1);
+ localStorage.setItem("nutri_custom_foods",JSON.stringify(customFoods));
+ let names=customFoods.map(f=>f.name);
+ for(let j=FOODS.length-1;j>=0;j--){
+   if(!FOODS[j].__builtin && !names.includes(FOODS[j].name)) FOODS.splice(j,1);
+ }
+ document.getElementById("foodSelect").innerHTML=`<option value="" selected disabled>Selecciona un alimento...</option>`;
+ FOODS.forEach((f,j)=>{let o=document.createElement("option");o.value=j;o.textContent=f.name;document.getElementById("foodSelect").appendChild(o)});
+ renderFoodInfo();
+ renderCustomFoods();
 }
 function saveWeight(){
  let w=+document.getElementById("weightInput").value,f=+document.getElementById("fatInput").value;

@@ -1,4 +1,4 @@
-const CACHE = 'mi-nutricion-v3';
+const CACHE = 'mi-nutricion-v4';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-180.png'];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(ASSETS)));
