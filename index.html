@@ -49,6 +49,10 @@ svg{width:100%;height:260px;background:#fff;border-radius:12px}
 <label>Añadir pasos</label><div class="row"><input id="stepsInput" type="number" min="0" step="1" placeholder="1000"><button id="saveSteps" type="button">Registrar pasos</button></div>
 <div id="stepsHistory" style="margin-top:12px"></div>
 </div>
+<div style="margin-top:16px">
+<label>Añadir deporte</label><div class="row"><select id="sportSelect"><option>Correr</option><option>Pesas</option><option>Caminar en pendiente</option><option>Otros</option></select><input id="sportKcalInput" type="number" min="0" step="1" placeholder="300"><button id="saveSport" type="button">+ Añadir</button></div>
+<div id="sportHistory" style="margin-top:12px"></div>
+</div>
 </div>
 
 <div class="card">
@@ -146,6 +150,7 @@ function init(){
    save();
    renderToday();
  };
+ document.getElementById("saveSport").onclick=addSport;
  document.getElementById("addFood").onclick=addFood;document.getElementById("saveWeight").onclick=saveWeight;document.getElementById("saveSettings").onclick=saveSettings;
  Object.keys(DEFAULTS).forEach(k=>{let el=document.getElementById(k);if(el)el.value=settings[k]});
  document.getElementById("dateLabel").textContent=fmtDate(today());renderFoodInfo();renderToday();renderWeight()
@@ -181,14 +186,39 @@ function removeStep(i){
  save();
  renderToday();
 }
+function sportEntriesForDay(day){
+ let v=state.sportLog?.[day];
+ return Array.isArray(v)?v:[];
+}
+function addSport(){
+ let sport=document.getElementById("sportSelect").value,kcal=+document.getElementById("sportKcalInput").value||0;
+ if(kcal<=0){alert("Introduce una cantidad de kcal válida.");return}
+ state.sportLog=state.sportLog||{};
+ state.sportLog[today()]=state.sportLog[today()]||[];
+ state.sportLog[today()].push({sport,kcal});
+ document.getElementById("sportKcalInput").value="";
+ save();
+ renderToday();
+}
+function removeSport(i){
+ let entries=sportEntriesForDay(today());
+ entries.splice(i,1);
+ state.sportLog=state.sportLog||{};
+ state.sportLog[today()]=entries;
+ save();
+ renderToday();
+}
 function renderToday(){
- let w=currentWeight()||82.15,steps=stepEntriesForDay(today()).reduce((a,v)=>a+Number(v),0), log=dailyLog(),tot=nutrients(log), target=bmr(w)+steps*.035-settings.deficit;
+ let w=currentWeight()||82.15,steps=stepEntriesForDay(today()).reduce((a,v)=>a+Number(v),0),sports=sportEntriesForDay(today()),sportKcal=sports.reduce((a,v)=>a+Number(v.kcal),0), log=dailyLog(),tot=nutrients(log), target=bmr(w)+steps*.035+sportKcal-settings.deficit;
  document.getElementById("stepsView").textContent=`${steps.toLocaleString("es-ES")} / ${settings.stepTarget.toLocaleString("es-ES")} pasos`;
  let rem=settings.stepTarget-steps;document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes`:`+${(-rem).toLocaleString("es-ES")} pasos`;
  let stepEntries=stepEntriesForDay(today());
  document.getElementById("stepsHistory").innerHTML=stepEntries.length
    ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos</span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
    : "<p class='muted'>Todavía no has añadido pasos.</p>";
+ document.getElementById("sportHistory").innerHTML=sports.length
+   ? sports.map((v,i)=>`<div class="foodrow"><span>${v.sport} — ${n(v.kcal,0)} kcal</span><button class="smallbtn" onclick="removeSport(${i})">Eliminar</button></div>`).join("")
+   : "<p class='muted'>Todavía no has añadido deporte.</p>";
  document.getElementById("calTarget").textContent=`${n(target,0)} kcal`;document.getElementById("calEaten").textContent=`${n(tot.kcal,0)} kcal`;document.getElementById("calLeft").textContent=`${n(target-tot.kcal,0)} kcal`;
  const rows=[["Proteína",tot.protein,settings.proteinTarget],["Grasa",tot.fat,settings.fatTarget],["Hidratos",tot.carbs,settings.carbTarget],["Fibra",tot.fiber,settings.fiberTarget],["Azúcares",tot.sugar,null]];
  document.getElementById("macros").innerHTML=rows.map(r=>`<div style="margin:10px 0"><div class="row"><b>${r[0]}</b><span>${n(r[1])} g${r[2]?` / ${n(r[2])} g`:""}</span></div>${r[2]?`<div class="progress"><div class="bar" style="width:${Math.min(100,r[1]/r[2]*100)}%"></div></div>`:""}</div>`).join("");
