@@ -34,6 +34,7 @@ svg{width:100%;height:260px;background:#fff;border-radius:12px}
 <button data-tab="today" class="active">Hoy</button>
 <button data-tab="weight">Peso</button>
 <button data-tab="settings">Configuración</button>
+<button data-tab="foods">Alimentos</button>
 </nav>
 
 <section id="today">
@@ -119,6 +120,25 @@ svg{width:100%;height:260px;background:#fff;border-radius:12px}
 </div><br><button id="saveSettings">Guardar configuración</button>
 <p class="muted">El gasto por pasos se estima a 35 kcal por cada 1.000 pasos.</p>
 </div></section>
+
+<section id="foods" class="hidden">
+<div class="card"><h2>Añadir alimento a la base de datos</h2>
+<p class="muted">Introduce los valores nutricionales por 100 g.</p>
+<div class="grid">
+<div><label>Nombre del alimento</label><input id="newFoodName" type="text" placeholder="Ej. Yogur natural"></div>
+<div><label>Kcal</label><input id="newFoodKcal" type="number" min="0" step="0.1"></div>
+<div><label>Grasas (g)</label><input id="newFoodFat" type="number" min="0" step="0.1"></div>
+<div><label>Grasas sat. (g)</label><input id="newFoodSatFat" type="number" min="0" step="0.1"></div>
+<div><label>Hidratos (g)</label><input id="newFoodCarbs" type="number" min="0" step="0.1"></div>
+<div><label>Azúcar (g)</label><input id="newFoodSugar" type="number" min="0" step="0.1"></div>
+<div><label>Fibra (g)</label><input id="newFoodFiber" type="number" min="0" step="0.1"></div>
+<div><label>Proteína (g)</label><input id="newFoodProtein" type="number" min="0" step="0.1"></div>
+</div><br><button id="addNewFood" type="button">+ Añadir alimento</button>
+<div id="newFoodMessage" class="muted" style="margin-top:10px"></div>
+</div>
+
+<div class="card"><h2>Mis alimentos añadidos</h2><div id="customFoodsHistory"></div></div>
+</section>
 </div>
 
 <script>
@@ -126,6 +146,8 @@ const FOODS = [{"name": "Aceite de oliva", "kcal": 900.0, "fat": 100.0, "satFat"
 const DEFAULTS={height:174,age:33,deficit:500,proteinTarget:145,fatTarget:55,carbTarget:145,fiberTarget:30,goalWeight:75,stepTarget:10000};
 let settings=JSON.parse(localStorage.getItem("nutri_settings")||"null")||DEFAULTS;
 let state=JSON.parse(localStorage.getItem("nutri_state")||'{"foodLog":{},"weightLog":{}}');
+let customFoods=JSON.parse(localStorage.getItem("nutri_custom_foods")||"[]");
+FOODS.push(...customFoods);
 
 function today(){let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function save(){localStorage.setItem("nutri_settings",JSON.stringify(settings));localStorage.setItem("nutri_state",JSON.stringify(state))}
@@ -151,9 +173,9 @@ function init(){
    renderToday();
  };
  document.getElementById("saveSport").onclick=addSport;
- document.getElementById("addFood").onclick=addFood;document.getElementById("saveWeight").onclick=saveWeight;document.getElementById("saveSettings").onclick=saveSettings;
+ document.getElementById("addFood").onclick=addFood;document.getElementById("saveWeight").onclick=saveWeight;document.getElementById("saveSettings").onclick=saveSettings;document.getElementById("addNewFood").onclick=addNewFood;
  Object.keys(DEFAULTS).forEach(k=>{let el=document.getElementById(k);if(el)el.value=settings[k]});
- document.getElementById("dateLabel").textContent=fmtDate(today());renderFoodInfo();renderToday();renderWeight()
+ document.getElementById("dateLabel").textContent=fmtDate(today());renderFoodInfo();renderToday();renderWeight();renderCustomFoods()
 }
 function renderFoodInfo(){
  let f=FOODS[+document.getElementById("foodSelect").value];
@@ -211,7 +233,7 @@ function removeSport(i){
 function renderToday(){
  let w=currentWeight()||82.15,steps=stepEntriesForDay(today()).reduce((a,v)=>a+Number(v),0),sports=sportEntriesForDay(today()),sportKcal=sports.reduce((a,v)=>a+Number(v.kcal),0), log=dailyLog(),tot=nutrients(log), target=bmr(w)+steps*.035+sportKcal-settings.deficit;
  document.getElementById("stepsView").textContent=`${steps.toLocaleString("es-ES")} / ${settings.stepTarget.toLocaleString("es-ES")} pasos`;
- let rem=settings.stepTarget-steps;document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes`:`+${(-rem).toLocaleString("es-ES")} pasos`;
+ let rem=settings.stepTarget-steps,remaining=Math.max(0,rem),minutes=Math.round(remaining/7000*60);document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes · ${minutes} min aprox.`:`+${(-rem).toLocaleString("es-ES")} pasos`;
  let stepEntries=stepEntriesForDay(today());
  document.getElementById("stepsHistory").innerHTML=stepEntries.length
    ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos</span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
@@ -223,6 +245,22 @@ function renderToday(){
  const rows=[["Proteína",tot.protein,settings.proteinTarget],["Grasa",tot.fat,settings.fatTarget],["Hidratos",tot.carbs,settings.carbTarget],["Fibra",tot.fiber,settings.fiberTarget],["Azúcares",tot.sugar,null]];
  document.getElementById("macros").innerHTML=rows.map(r=>`<div style="margin:10px 0"><div class="row"><b>${r[0]}</b><span>${n(r[1])} g${r[2]?` / ${n(r[2])} g`:""}</span></div>${r[2]?`<div class="progress"><div class="bar" style="width:${Math.min(100,r[1]/r[2]*100)}%"></div></div>`:""}</div>`).join("");
  const meals=["Desayuno","Comida","Cena","Snack"];document.getElementById("meals").innerHTML=meals.map(m=>{let items=log.map((x,i)=>({...x,i})).filter(x=>x.meal===m);if(!items.length)return "";let t=nutrients(items);return `<h3>${m} (${n(t.kcal,0)} kcal / ${n(t.fat)} g grasa / ${n(t.carbs)} g hidratos / ${n(t.protein)} g proteína)</h3>`+items.map(x=>`<div class="foodrow"><span>${x.name} — ${n(x.grams,0)} g</span><button class="smallbtn" onclick="removeFood(${x.i})">Eliminar</button></div>`).join("")}).join("")||"<p class='muted'>Todavía no has añadido alimentos.</p>";
+}
+function addNewFood(){
+ let name=document.getElementById("newFoodName").value.trim();
+ let ids=["newFoodKcal","newFoodFat","newFoodSatFat","newFoodCarbs","newFoodSugar","newFoodFiber","newFoodProtein"];
+ let vals=ids.map(id=>Number(document.getElementById(id).value));
+ if(!name || vals.some(v=>!Number.isFinite(v)||v<0)){alert("Introduce un nombre y todos los valores nutricionales.");return}
+ let food={name,kcal:vals[0],fat:vals[1],satFat:vals[2],carbs:vals[3],sugar:vals[4],fiber:vals[5],protein:vals[6]};
+ customFoods.push(food);FOODS.push(food);localStorage.setItem("nutri_custom_foods",JSON.stringify(customFoods));
+ let sel=document.getElementById("foodSelect"),o=document.createElement("option");o.value=FOODS.length-1;o.textContent=food.name;sel.appendChild(o);
+ document.getElementById("newFoodName").value="";ids.forEach(id=>document.getElementById(id).value="");
+ document.getElementById("newFoodMessage").textContent=`Añadido: ${food.name}`;
+ renderCustomFoods();
+}
+function renderCustomFoods(){
+ let el=document.getElementById("customFoodsHistory");
+ el.innerHTML=customFoods.length?customFoods.map(f=>`<div class="foodrow"><span>${f.name}</span><span class="muted">${n(f.kcal,0)} kcal / 100 g</span></div>`).join(""):"<p class='muted'>Todavía no has añadido alimentos propios.</p>";
 }
 function saveWeight(){
  let w=+document.getElementById("weightInput").value,f=+document.getElementById("fatInput").value;
