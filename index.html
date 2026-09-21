@@ -238,7 +238,7 @@ function renderToday(){
  let rem=settings.stepTarget-steps,remaining=Math.max(0,rem),minutes=Math.round(remaining/7000*60);document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes · ${minutes} min aprox.`:`+${(-rem).toLocaleString("es-ES")} pasos`;
  let stepEntries=stepEntriesForDay(today());
  document.getElementById("stepsHistory").innerHTML=stepEntries.length
-   ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos · ${n(Number(v)*.035,0)} kcal</span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
+   ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos · <span class="metric">${n(Number(v)*.035,0)} kcal</span></span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
    : "<p class='muted'>Todavía no has añadido pasos.</p>";
  document.getElementById("sportHistory").innerHTML=sports.length
    ? sports.map((v,i)=>`<div class="foodrow"><span>${v.sport} — ${n(v.kcal,0)} kcal</span><button class="smallbtn" onclick="removeSport(${i})">Eliminar</button></div>`).join("")
@@ -315,7 +315,22 @@ function drawChart(entries){
  let yTicks=4, yLabels=Array.from({length:yTicks+1},(_,i)=>max-(max-min)*i/yTicks);
  let yGrid=yLabels.map(v=>{let y=pt+(max-v)/(max-min)*ih;return `<line x1="${pl}" y1="${y}" x2="${W-pr}" y2="${y}" stroke="#eee"/><text x="${pl-8}" y="${y+4}" text-anchor="end" font-size="12" fill="#6b7280">${v.toFixed(1)} kg</text>`}).join("");
  let xLabels=entries.map((e,i)=>{let x=pts[i][0];let label=fmtDate(e[0]);return `<text x="${x}" y="${H-18}" text-anchor="middle" font-size="11" fill="#6b7280">${label}</text>`}).join("");
- el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Evolución del peso"><line x1="${pl}" y1="${pt}" x2="${pl}" y2="${H-pb}" stroke="#ddd"/><line x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}" stroke="#ddd"/>${yGrid}${xLabels}<path d="${path}" fill="none" stroke="#111827" stroke-width="3"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="4" fill="#111827"><title>${fmtDate(entries[i][0])}: ${n(vals[i],2)} kg</title></circle>`).join("")}</svg>`;
+ el.innerHTML=`<div id="chartWrap" style="position:relative"><svg id="weightSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Evolución del peso" style="touch-action:manipulation"><line x1="${pl}" y1="${pt}" x2="${pl}" y2="${H-pb}" stroke="#ddd"/><line x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}" stroke="#ddd"/>${yGrid}${xLabels}<path d="${path}" fill="none" stroke="#111827" stroke-width="3"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="8" fill="#111827" fill-opacity="0.001" stroke="none" data-point="${i}"/><circle cx="${q[0]}" cy="${q[1]}" r="4" fill="#111827" pointer-events="none"/>`).join("")}</svg><div id="chartTooltip" class="hidden" style="position:absolute;z-index:2;background:white;border:1px solid #d1d5db;border-radius:10px;padding:10px 12px;box-shadow:0 4px 14px #00000018;font-size:14px;line-height:1.45;pointer-events:none;min-width:145px"></div></div>`;
+  const wrap=document.getElementById("chartWrap"),svg=document.getElementById("weightSvg"),tooltip=document.getElementById("chartTooltip");
+  wrap.querySelectorAll("[data-point]").forEach(p=>p.addEventListener("click",ev=>{
+    ev.stopPropagation();
+    const i=+p.getAttribute("data-point"), day=entries[i][0], v=entries[i][1];
+    const vb=svg.viewBox.baseVal, rect=svg.getBoundingClientRect();
+    const x=Number(p.getAttribute("cx"))/vb.width*rect.width;
+    const y=Number(p.getAttribute("cy"))/vb.height*rect.height;
+    tooltip.innerHTML=`<b>${new Date(day+"T12:00:00").toLocaleDateString("es-ES",{day:"numeric",month:"long",year:"numeric"})}</b><br>Peso: ${n(v.weight,2)} kg<br>Grasa corporal: ${n(v.fat,1)} %`;
+    tooltip.classList.remove("hidden");
+    const tw=tooltip.offsetWidth, th=tooltip.offsetHeight;
+    const left=Math.max(6,Math.min(rect.width-tw-6,x-tw/2));
+    const top=Math.max(6,y-th-12);
+    tooltip.style.left=left+"px"; tooltip.style.top=top+"px";
+  }));
+  document.addEventListener("click",()=>tooltip.classList.add("hidden"),{once:true});
 }
 init();
 if ('serviceWorker' in navigator) {
