@@ -315,22 +315,19 @@ function drawChart(entries){
  let yTicks=4, yLabels=Array.from({length:yTicks+1},(_,i)=>max-(max-min)*i/yTicks);
  let yGrid=yLabels.map(v=>{let y=pt+(max-v)/(max-min)*ih;return `<line x1="${pl}" y1="${y}" x2="${W-pr}" y2="${y}" stroke="#eee"/><text x="${pl-8}" y="${y+4}" text-anchor="end" font-size="12" fill="#6b7280">${v.toFixed(1)} kg</text>`}).join("");
  let xLabels=entries.map((e,i)=>{let x=pts[i][0];let label=fmtDate(e[0]);return `<text x="${x}" y="${H-18}" text-anchor="middle" font-size="11" fill="#6b7280">${label}</text>`}).join("");
- el.innerHTML=`<div id="chartWrap" style="position:relative"><svg id="weightSvg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Evolución del peso" style="touch-action:manipulation"><line x1="${pl}" y1="${pt}" x2="${pl}" y2="${H-pb}" stroke="#ddd"/><line x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}" stroke="#ddd"/>${yGrid}${xLabels}<path d="${path}" fill="none" stroke="#111827" stroke-width="3"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="8" fill="#111827" fill-opacity="0.001" stroke="none" data-point="${i}"/><circle cx="${q[0]}" cy="${q[1]}" r="4" fill="#111827" pointer-events="none"/>`).join("")}</svg><div id="chartTooltip" class="hidden" style="position:absolute;z-index:2;background:white;border:1px solid #d1d5db;border-radius:10px;padding:10px 12px;box-shadow:0 4px 14px #00000018;font-size:14px;line-height:1.45;pointer-events:none;min-width:145px"></div></div>`;
-  const wrap=document.getElementById("chartWrap"),svg=document.getElementById("weightSvg"),tooltip=document.getElementById("chartTooltip");
-  wrap.querySelectorAll("[data-point]").forEach(p=>p.addEventListener("click",ev=>{
-    ev.stopPropagation();
-    const i=+p.getAttribute("data-point"), day=entries[i][0], v=entries[i][1];
-    const vb=svg.viewBox.baseVal, rect=svg.getBoundingClientRect();
-    const x=Number(p.getAttribute("cx"))/vb.width*rect.width;
-    const y=Number(p.getAttribute("cy"))/vb.height*rect.height;
-    tooltip.innerHTML=`<b>${new Date(day+"T12:00:00").toLocaleDateString("es-ES",{day:"numeric",month:"long",year:"numeric"})}</b><br>Peso: ${n(v.weight,2)} kg<br>Grasa corporal: ${n(v.fat,1)} %`;
-    tooltip.classList.remove("hidden");
-    const tw=tooltip.offsetWidth, th=tooltip.offsetHeight;
-    const left=Math.max(6,Math.min(rect.width-tw-6,x-tw/2));
-    const top=Math.max(6,y-th-12);
-    tooltip.style.left=left+"px"; tooltip.style.top=top+"px";
-  }));
-  document.addEventListener("click",()=>tooltip.classList.add("hidden"),{once:true});
+ el.style.position="relative";
+ el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Evolución del peso"><line x1="${pl}" y1="${pt}" x2="${pl}" y2="${H-pb}" stroke="#ddd"/><line x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}" stroke="#ddd"/>${yGrid}${xLabels}<path d="${path}" fill="none" stroke="#111827" stroke-width="3"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="9" fill="transparent" data-point="${i}" style="cursor:pointer"/><circle cx="${q[0]}" cy="${q[1]}" r="4" fill="#111827"/>`).join("")}</svg><div id="weightTooltip" style="display:none;position:absolute;background:white;border:1px solid #d1d5db;border-radius:10px;padding:9px 11px;box-shadow:0 4px 14px #00000018;font-size:13px;line-height:1.45;z-index:2;pointer-events:none"></div>`;
+ let tooltip=document.getElementById("weightTooltip"),svg=el.querySelector("svg");
+ el.querySelectorAll("[data-point]").forEach(point=>point.addEventListener("click",ev=>{
+   ev.stopPropagation();
+   let i=Number(point.dataset.point),entry=entries[i],date=new Date(entry[0]+"T12:00:00").toLocaleDateString("es-ES",{day:"numeric",month:"long",year:"numeric"});
+   tooltip.innerHTML=`<strong>${date}</strong><br>Peso: ${n(entry[1].weight,2)} kg<br>Grasa corporal: ${n(entry[1].fat,1)} %`;
+   let x=Number(point.getAttribute("cx"))/W*100,y=Number(point.getAttribute("cy"))/H*100;
+   tooltip.style.display="block";
+   tooltip.style.left=`${Math.min(Math.max(x,12),78)}%`;
+   tooltip.style.top=`${Math.max(4,y-18)}%`;
+ }));
+ document.addEventListener("click",()=>{if(tooltip)tooltip.style.display="none"},{once:true});
 }
 init();
 if ('serviceWorker' in navigator) {
