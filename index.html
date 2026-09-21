@@ -47,7 +47,8 @@ svg{width:100%;height:260px;background:#fff;border-radius:12px}
 <div><div class="muted">Te quedan</div><div class="metric" id="calLeft">0 kcal</div></div>
 </div>
 <div style="margin-top:16px">
-<label>Añadir pasos</label><div class="row"><input id="stepsInput" type="number" min="0" step="1" placeholder="1000"><button id="saveSteps" type="button">Registrar pasos</button></div>
+<label>Total kcal quemadas</label><div class="metric" id="calBurned">0 kcal</div>
+<label style="display:block;margin-top:14px">Añadir pasos</label><div class="row"><input id="stepsInput" type="number" min="0" step="1" placeholder="1000"><button id="saveSteps" type="button">Registrar pasos</button></div>
 <div id="stepsHistory" style="margin-top:12px"></div>
 </div>
 <div style="margin-top:16px">
@@ -233,6 +234,7 @@ function removeSport(i){
 function renderToday(){
  let w=currentWeight()||82.15,steps=stepEntriesForDay(today()).reduce((a,v)=>a+Number(v),0),sports=sportEntriesForDay(today()),sportKcal=sports.reduce((a,v)=>a+Number(v.kcal),0), log=dailyLog(),tot=nutrients(log), target=bmr(w)+steps*.035+sportKcal-settings.deficit;
  document.getElementById("stepsView").textContent=`${steps.toLocaleString("es-ES")} / ${settings.stepTarget.toLocaleString("es-ES")} pasos`;
+ document.getElementById("calBurned").textContent=`${n(steps*.035+sportKcal,0)} kcal`;
  let rem=settings.stepTarget-steps,remaining=Math.max(0,rem),minutes=Math.round(remaining/7000*60);document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes · ${minutes} min aprox.`:`+${(-rem).toLocaleString("es-ES")} pasos`;
  let stepEntries=stepEntriesForDay(today());
  document.getElementById("stepsHistory").innerHTML=stepEntries.length
@@ -305,10 +307,15 @@ function renderWeight(){
 }
 function drawChart(entries){
  let el=document.getElementById("weightChart");if(!entries.length){el.innerHTML="<p class='muted'>Añade tu primer registro para ver la evolución.</p>";return}
- let vals=entries.map(e=>e[1].weight),min=Math.min(...vals,settings.goalWeight)-1,max=Math.max(...vals)+1,W=900,H=260,p=45;
- let pts=vals.map((v,i)=>[p+i*(W-2*p)/Math.max(1,vals.length-1),H-p-(v-min)/(max-min)*(H-2*p)]);
+ let vals=entries.map(e=>e[1].weight),rawMin=Math.min(...vals,settings.goalWeight),rawMax=Math.max(...vals),min=Math.floor(rawMin)-1,max=Math.ceil(rawMax)+1;
+ if(max<=min)max=min+2;
+ let W=900,H=310,pl=58,pr=20,pt=15,pb=55,iw=W-pl-pr,ih=H-pt-pb;
+ let pts=vals.map((v,i)=>[pl+i*iw/Math.max(1,vals.length-1),pt+(max-v)/(max-min)*ih]);
  let path=pts.map((q,i)=>(i?"L":"M")+q[0].toFixed(1)+" "+q[1].toFixed(1)).join(" ");
- el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><line x1="${p}" y1="${H-p}" x2="${W-p}" y2="${H-p}" stroke="#ddd"/><line x1="${p}" y1="${p}" x2="${p}" y2="${H-p}" stroke="#ddd"/><path d="${path}" fill="none" stroke="#111827" stroke-width="3"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="4" fill="#111827"><title>${entries[i][0]}: ${n(vals[i],2)} kg</title></circle>`).join("")}</svg>`;
+ let yTicks=4, yLabels=Array.from({length:yTicks+1},(_,i)=>max-(max-min)*i/yTicks);
+ let yGrid=yLabels.map(v=>{let y=pt+(max-v)/(max-min)*ih;return `<line x1="${pl}" y1="${y}" x2="${W-pr}" y2="${y}" stroke="#eee"/><text x="${pl-8}" y="${y+4}" text-anchor="end" font-size="12" fill="#6b7280">${v.toFixed(1)} kg</text>`}).join("");
+ let xLabels=entries.map((e,i)=>{let x=pts[i][0];let label=fmtDate(e[0]);return `<text x="${x}" y="${H-18}" text-anchor="middle" font-size="11" fill="#6b7280">${label}</text>`}).join("");
+ el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Evolución del peso"><line x1="${pl}" y1="${pt}" x2="${pl}" y2="${H-pb}" stroke="#ddd"/><line x1="${pl}" y1="${H-pb}" x2="${W-pr}" y2="${H-pb}" stroke="#ddd"/>${yGrid}${xLabels}<path d="${path}" fill="none" stroke="#111827" stroke-width="3"/>${pts.map((q,i)=>`<circle cx="${q[0]}" cy="${q[1]}" r="4" fill="#111827"><title>${fmtDate(entries[i][0])}: ${n(vals[i],2)} kg</title></circle>`).join("")}</svg>`;
 }
 init();
 if ('serviceWorker' in navigator) {
