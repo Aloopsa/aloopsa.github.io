@@ -238,7 +238,7 @@ function renderToday(){
  let rem=settings.stepTarget-steps,remaining=Math.max(0,rem),minutes=Math.round(remaining/7000*60);document.getElementById("stepsRemaining").textContent=rem>=0?`${rem.toLocaleString("es-ES")} pasos restantes · ${minutes} min aprox.`:`+${(-rem).toLocaleString("es-ES")} pasos`;
  let stepEntries=stepEntriesForDay(today());
  document.getElementById("stepsHistory").innerHTML=stepEntries.length
-   ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos · <span class="metric">${n(Number(v)*.035,0)} kcal</span></span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
+   ? stepEntries.map((v,i)=>`<div class="foodrow"><span>${Number(v).toLocaleString("es-ES")} pasos · ${n(Number(v)*.035,0)} kcal</span><button class="smallbtn" onclick="removeStep(${i})">Eliminar</button></div>`).join("")
    : "<p class='muted'>Todavía no has añadido pasos.</p>";
  document.getElementById("sportHistory").innerHTML=sports.length
    ? sports.map((v,i)=>`<div class="foodrow"><span>${v.sport} — ${n(v.kcal,0)} kcal</span><button class="smallbtn" onclick="removeSport(${i})">Eliminar</button></div>`).join("")
